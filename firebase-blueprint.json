@@ -1,0 +1,102 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile information and settings.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "User email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "role": { "type": "string", "enum": ["admin", "user"], "description": "User role" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Prospect": {
+      "title": "Prospect",
+      "description": "A potential sales lead.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID" },
+        "userId": { "type": "string", "description": "Owner UID" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "company": { "type": "string" },
+        "title": { "type": "string" },
+        "linkedinUrl": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "contacted", "replied", "bounced", "unsubscribed"] },
+        "researchData": { "type": "string", "description": "AI-generated research notes" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "status"]
+    },
+    "Sequence": {
+      "title": "Sequence",
+      "description": "A series of outreach steps.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "steps": { "type": "array", "items": { "$ref": "SequenceStep" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name"]
+    },
+    "SequenceStep": {
+      "title": "Sequence Step",
+      "description": "A single step in a sequence.",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["email", "call"] },
+        "day": { "type": "integer", "description": "Day of the sequence" },
+        "subject": { "type": "string" },
+        "template": { "type": "string" },
+        "variantB": { "type": "string", "description": "Optional B variant for email steps" },
+        "subjectB": { "type": "string", "description": "Optional B variant subject" }
+      }
+    },
+    "ProspectSequence": {
+      "title": "Prospect Sequence Enrollment",
+      "description": "Tracks a prospect's progress through a sequence.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "prospectId": { "type": "string" },
+        "sequenceId": { "type": "string" },
+        "currentStepIndex": { "type": "integer" },
+        "status": { "type": "string", "enum": ["active", "paused", "completed", "replied", "scheduled"] },
+        "lastActionAt": { "type": "string", "format": "date-time" },
+        "nextActionAt": { "type": "string", "format": "date-time" },
+        "scheduledAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "prospectId", "sequenceId", "status"]
+    },
+    "SentEmail": {
+      "title": "Sent Email",
+      "description": "Record of an email sent to a prospect.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "prospectId": { "type": "string" },
+        "prospectName": { "type": "string" },
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "sentAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "prospectId", "subject", "body", "sentAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": { "schema": "User", "description": "User profiles" },
+    "/prospects/{prospectId}": { "schema": "Prospect", "description": "Prospects" },
+    "/sequences/{sequenceId}": { "schema": "Sequence", "description": "Sequences" },
+    "/enrollments/{enrollmentId}": { "schema": "ProspectSequence", "description": "Prospect sequence enrollments" },
+    "/sent_emails/{emailId}": { "schema": "SentEmail", "description": "History of sent emails" }
+  }
+}

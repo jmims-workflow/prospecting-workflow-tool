@@ -1,0 +1,143 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {uid}
+// Fields:
+//   - uid: string (required)
+//   - email: string (required, email format)
+//   - role: string (required, ['admin', 'user'])
+//   - displayName: string (optional)
+//   - createdAt: string (optional, date-time)
+//
+// Collection: prospects
+// Document ID: {prospectId}
+// Fields:
+//   - userId: string (required, immutable)
+//   - email: string (required, email format)
+//   - status: string (required, enum)
+//   - firstName: string (optional)
+//   - lastName: string (optional)
+//   - company: string (optional)
+//   - title: string (optional)
+//   - researchData: string (optional)
+//
+// Collection: sequences
+// Document ID: {sequenceId}
+// Fields:
+//   - userId: string (required, immutable)
+//   - name: string (required)
+//   - steps: list (optional)
+//
+// Collection: enrollments
+// Document ID: {enrollmentId}
+// Fields:
+//   - userId: string (required, immutable)
+//   - prospectId: string (required)
+//   - sequenceId: string (required)
+//   - status: string (required, enum)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && (resource == null || request.auth.uid == resource.data.userId);
+    }
+
+    function uidUnchanged() {
+      return !('userId' in request.resource.data) || 
+             request.resource.data.userId == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('userId' in request.resource.data) || 
+             request.resource.data.userId == resource.data.userId;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid is string && data.uid.size() < 128 &&
+             data.email is string && data.email.size() < 256 && isValidEmail(data.email) &&
+             data.role in ['admin', 'user'];
+    }
+
+    function isValidProspect(data) {
+      return data.keys().hasAll(['userId', 'email', 'status']) &&
+             data.userId is string && data.userId.size() < 128 &&
+             data.email is string && data.email.size() < 256 && isValidEmail(data.email) &&
+             data.status in ['new', 'contacted', 'replied', 'bounced', 'unsubscribed'] &&
+             (!('firstName' in data) || (data.firstName is string && data.firstName.size() < 100)) &&
+             (!('lastName' in data) || (data.lastName is string && data.lastName.size() < 100));
+    }
+
+    function isValidSequence(data) {
+      return data.keys().hasAll(['userId', 'name']) &&
+             data.userId is string && data.userId.size() < 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200;
+    }
+
+    function isValidEnrollment(data) {
+      return data.keys().hasAll(['userId', 'prospectId', 'sequenceId', 'status']) &&
+             data.userId is string && data.userId.size() < 128 &&
+             data.prospectId is string && data.prospectId.size() < 128 &&
+             data.sequenceId is string && data.sequenceId.size() < 128 &&
+             data.status in ['active', 'paused', 'completed', 'replied', 'scheduled'];
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidUser(request.resource.data);
+      allow update: if isOwner(uid) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role;
+    }
+
+    match /prospects/{prospectId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && uidUnchanged() && isValidProspect(request.resource.data);
+      allow update: if isDocOwner() && uidNotModified() && isValidProspect(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /sequences/{sequenceId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && uidUnchanged() && isValidSequence(request.resource.data);
+      allow update: if isDocOwner() && uidNotModified() && isValidSequence(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /enrollments/{enrollmentId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && uidUnchanged() && isValidEnrollment(request.resource.data);
+      allow update: if isDocOwner() && uidNotModified() && isValidEnrollment(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /sent_emails/{emailId} {
+      allow read: if isDocOwner();
+      allow create: if isAuthenticated() && uidUnchanged();
+      allow delete: if isDocOwner();
+    }
+    
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
