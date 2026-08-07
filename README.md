@@ -341,43 +341,6 @@ It does not currently include:
 
 ---
 
-## Running the Project Locally
-
-### Install Dependencies
-
-```bash
-npm install
-```
-
-### Configure Firebase
-
-Add your Firebase project configuration to:
-
-```text
-firebase-applet-config.json
-```
-
-Placeholder values are included in this repository. Credentials from the original deployment are not included.
-
-### Configure Environment Variables
-
-Create a local `.env` file and add the required credentials.
-
-```text
-GEMINI_API_KEY=
-RESEND_API_KEY=
-```
-
-Additional Google or Firebase configuration may be required depending on the environment.
-
-### Start the Application
-
-```bash
-npm run dev
-```
-
----
-
 ## Project Status
 
 Working prototype built around a real user workflow.
@@ -385,3 +348,5 @@ Working prototype built around a real user workflow.
 The broader question behind the project was:
 
 **How can AI and automation be embedded into a business workflow in a way that reduces friction, connects the systems where work already happens, and keeps people responsible for decisions requiring judgment?**
+
+> Note: This repository is intended as a portfolio case study and code sample. Credentials and deployment configuration for the original application are not included.
