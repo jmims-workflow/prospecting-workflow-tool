@@ -39,103 +39,225 @@
 //   - status: string (required, enum)
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions
+
+    // ===========================================================
+    // Helper Functions
+    // ===========================================================
+
     function isAuthenticated() {
       return request.auth != null;
     }
-    
+
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-    
-    function isDocOwner() {
-      return isAuthenticated() && (resource == null || request.auth.uid == resource.data.userId);
+      return isAuthenticated() &&
+             request.auth.uid == userId;
     }
 
-    function uidUnchanged() {
-      return !('userId' in request.resource.data) || 
+    function isDocOwner() {
+      return isAuthenticated() &&
+             resource != null &&
+             request.auth.uid == resource.data.userId;
+    }
+
+    function uidMatchesAuthenticatedUser() {
+      return isAuthenticated() &&
+             request.resource.data.userId is string &&
              request.resource.data.userId == request.auth.uid;
     }
 
     function uidNotModified() {
-      return !('userId' in request.resource.data) || 
-             request.resource.data.userId == resource.data.userId;
+      return request.resource.data.userId == resource.data.userId;
     }
 
     function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+      return email is string &&
+             email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
     }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
+    // ===========================================================
+    // Validation Functions
+    // ===========================================================
 
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email', 'role']) &&
-             data.uid is string && data.uid.size() < 128 &&
-             data.email is string && data.email.size() < 256 && isValidEmail(data.email) &&
-             data.role in ['admin', 'user'];
+             data.uid is string &&
+             data.uid.size() < 128 &&
+             data.email is string &&
+             data.email.size() < 256 &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'user'] &&
+             (!('displayName' in data) ||
+               (data.displayName is string &&
+                data.displayName.size() < 200)) &&
+             (!('createdAt' in data) ||
+               data.createdAt is string);
     }
 
     function isValidProspect(data) {
       return data.keys().hasAll(['userId', 'email', 'status']) &&
-             data.userId is string && data.userId.size() < 128 &&
-             data.email is string && data.email.size() < 256 && isValidEmail(data.email) &&
-             data.status in ['new', 'contacted', 'replied', 'bounced', 'unsubscribed'] &&
-             (!('firstName' in data) || (data.firstName is string && data.firstName.size() < 100)) &&
-             (!('lastName' in data) || (data.lastName is string && data.lastName.size() < 100));
+             data.userId is string &&
+             data.userId.size() < 128 &&
+             data.email is string &&
+             data.email.size() < 256 &&
+             isValidEmail(data.email) &&
+             data.status in [
+               'new',
+               'contacted',
+               'replied',
+               'bounced',
+               'unsubscribed'
+             ] &&
+             (!('firstName' in data) ||
+               (data.firstName is string &&
+                data.firstName.size() < 100)) &&
+             (!('lastName' in data) ||
+               (data.lastName is string &&
+                data.lastName.size() < 100)) &&
+             (!('company' in data) ||
+               (data.company is string &&
+                data.company.size() < 200)) &&
+             (!('title' in data) ||
+               (data.title is string &&
+                data.title.size() < 200)) &&
+             (!('researchData' in data) ||
+               data.researchData is string);
     }
 
     function isValidSequence(data) {
       return data.keys().hasAll(['userId', 'name']) &&
-             data.userId is string && data.userId.size() < 128 &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 200;
+             data.userId is string &&
+             data.userId.size() < 128 &&
+             data.name is string &&
+             data.name.size() > 0 &&
+             data.name.size() < 200 &&
+             (!('steps' in data) ||
+               data.steps is list);
     }
 
     function isValidEnrollment(data) {
-      return data.keys().hasAll(['userId', 'prospectId', 'sequenceId', 'status']) &&
-             data.userId is string && data.userId.size() < 128 &&
-             data.prospectId is string && data.prospectId.size() < 128 &&
-             data.sequenceId is string && data.sequenceId.size() < 128 &&
-             data.status in ['active', 'paused', 'completed', 'replied', 'scheduled'];
+      return data.keys().hasAll([
+               'userId',
+               'prospectId',
+               'sequenceId',
+               'status'
+             ]) &&
+             data.userId is string &&
+             data.userId.size() < 128 &&
+             data.prospectId is string &&
+             data.prospectId.size() < 128 &&
+             data.sequenceId is string &&
+             data.sequenceId.size() < 128 &&
+             data.status in [
+               'active',
+               'paused',
+               'completed',
+               'replied',
+               'scheduled'
+             ];
     }
+
+    // ===========================================================
+    // Users
+    // ===========================================================
 
     match /users/{uid} {
+
       allow read: if isOwner(uid);
-      allow create: if isOwner(uid) && isValidUser(request.resource.data);
-      allow update: if isOwner(uid) && isValidUser(request.resource.data) && request.resource.data.role == resource.data.role;
+
+      // Users may create only their own profile and may not
+      // assign themselves an admin role.
+      allow create: if isOwner(uid) &&
+                    isValidUser(request.resource.data) &&
+                    request.resource.data.uid == uid &&
+                    request.resource.data.role == 'user';
+
+      // Users may update their own profile but cannot change
+      // their UID or elevate/change their role.
+      allow update: if isOwner(uid) &&
+                    isValidUser(request.resource.data) &&
+                    request.resource.data.uid == uid &&
+                    request.resource.data.uid == resource.data.uid &&
+                    request.resource.data.role == resource.data.role;
     }
+
+    // ===========================================================
+    // Prospects
+    // ===========================================================
 
     match /prospects/{prospectId} {
+
       allow read: if isDocOwner();
-      allow create: if isAuthenticated() && uidUnchanged() && isValidProspect(request.resource.data);
-      allow update: if isDocOwner() && uidNotModified() && isValidProspect(request.resource.data);
+
+      allow create: if uidMatchesAuthenticatedUser() &&
+                    isValidProspect(request.resource.data);
+
+      allow update: if isDocOwner() &&
+                    uidNotModified() &&
+                    isValidProspect(request.resource.data);
+
       allow delete: if isDocOwner();
     }
+
+    // ===========================================================
+    // Sequences
+    // ===========================================================
 
     match /sequences/{sequenceId} {
+
       allow read: if isDocOwner();
-      allow create: if isAuthenticated() && uidUnchanged() && isValidSequence(request.resource.data);
-      allow update: if isDocOwner() && uidNotModified() && isValidSequence(request.resource.data);
+
+      allow create: if uidMatchesAuthenticatedUser() &&
+                    isValidSequence(request.resource.data);
+
+      allow update: if isDocOwner() &&
+                    uidNotModified() &&
+                    isValidSequence(request.resource.data);
+
       allow delete: if isDocOwner();
     }
+
+    // ===========================================================
+    // Enrollments
+    // ===========================================================
 
     match /enrollments/{enrollmentId} {
+
       allow read: if isDocOwner();
-      allow create: if isAuthenticated() && uidUnchanged() && isValidEnrollment(request.resource.data);
-      allow update: if isDocOwner() && uidNotModified() && isValidEnrollment(request.resource.data);
+
+      allow create: if uidMatchesAuthenticatedUser() &&
+                    isValidEnrollment(request.resource.data);
+
+      allow update: if isDocOwner() &&
+                    uidNotModified() &&
+                    isValidEnrollment(request.resource.data);
+
       allow delete: if isDocOwner();
     }
 
+    // ===========================================================
+    // Sent Emails
+    // ===========================================================
+
     match /sent_emails/{emailId} {
+
       allow read: if isDocOwner();
-      allow create: if isAuthenticated() && uidUnchanged();
+
+      // A sent-email record must explicitly belong to
+      // the authenticated user creating it.
+      allow create: if uidMatchesAuthenticatedUser();
+
       allow delete: if isDocOwner();
     }
-    
-    // Default deny
+
+    // ===========================================================
+    // Default Deny
+    // ===========================================================
+
+    // Any collection or operation not explicitly allowed above
+    // is denied.
     match /{document=**} {
       allow read, write: if false;
     }
