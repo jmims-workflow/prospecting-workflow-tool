@@ -1,10 +1,10 @@
 # Human-in-the-Loop Sales Outreach Workflow
 
-A lightweight AI-enabled outreach application built to solve a real prospecting workflow problem.
-
-The project began when a salesperson lost access to the sales-engagement platform she had relied on after it was removed from her company’s tech stack. Rather than recreate an enterprise platform, I focused on the parts of her workflow creating the most friction and built a working prototype around them.
-
-The goal was simple: reduce repetitive work, restore visibility into follow-up activity, and use AI where it was useful without removing human judgment.
+> A lightweight AI-enabled outreach application built to solve a real prospecting workflow problem.
+> 
+> The project began when a salesperson lost access to the sales-engagement platform she had relied on after it was removed from her company’s tech stack. Rather than recreate an enterprise platform, I focused on the parts of her workflow creating the most friction and built a working prototype around them.
+> 
+> The goal was simple: reduce repetitive work, restore visibility into follow-up activity, and use AI where it was useful without removing human judgment.
 
 ---
 
@@ -78,54 +78,38 @@ The application allows a user to:
 
 The application automates administrative and repeatable work while keeping consequential decisions with the user.
 
-Examples:
+### Functional Split
+
+| Work Category | Operational Focus | Examples |
+| :--- | :--- | :--- |
+| **Automate** | Repetitive, rules-based, administrative tasks | Workflow tracking, prospect record updates, sequence progression, activity state, dashboard updates |
+| **AI + Human** | Tasks where AI accelerates work but human context matters | Message drafting, content refinement, outreach assistance |
+| **Human** | Actions where judgment and accountability remain explicit | Final message approval, confirming call completion, deciding whether to pause, skip, or continue outreach |
+
+### Principles in Action
 
 - AI can assist with drafting, but the user reviews the message before it is sent.
 - Call steps are tracked, but the user must confirm that the call occurred.
 - Sequences can be paused or skipped at any point.
 - Outreach remains visible and interruptible rather than operating as an opaque autonomous process.
 
-The objective was not maximum automation.
-
-It was to remove friction while preserving judgment, accountability, and user control.
-
----
-
-## How I Approached the Workflow
-
-I divided the process into three categories:
-
-### Automate
-
-Tasks that were repetitive, rules-based, or primarily administrative:
-
-- Workflow tracking
-- Prospect record updates
-- Sequence progression
-- Activity state
-- Dashboard updates
-
-### AI + Human
-
-Tasks where AI could accelerate the work but human context still mattered:
-
-- Message drafting
-- Content refinement
-- Outreach assistance
-
-### Human
-
-Actions where judgment and accountability should remain explicit:
-
-- Final message approval
-- Confirming call completion
-- Deciding whether to pause, skip, or continue outreach
-
-This helped determine where AI added value and where it would create unnecessary risk or complexity.
+The objective was not maximum automation. It was to remove friction while preserving judgment, accountability, and user control. This approach helped determine where AI added value and where it would create unnecessary risk or complexity.
 
 ---
 
 ## Architecture
+
+### System Architecture
+
+[ React + TypeScript Frontend ]
+             │
+             ├── (Real-time Sync) ──► [ Cloud Firestore ] ◄── Security Rules (`firestore.rules`)
+             │
+             ▼
+[ Express API Gateway ]
+   ├── Auth        ──► Firebase / Google OAuth
+   ├── Generative  ──► Gemini API
+   └── Mail        ──► Gmail API (Primary) ──(Fallback)──► Resend API
 
 ### Front End
 
@@ -207,63 +191,19 @@ This allows AI to support work inside the broader process rather than forcing th
 
 ## Key Design Decisions
 
-### Solve the Workflow, Not the Entire Category
-
-The goal was not to recreate Outreach, Salesloft, or another enterprise sales-engagement platform.
-
-The prototype focuses on the capabilities the user actually needed and intentionally leaves out functionality that was not necessary to validate the workflow.
-
-### Start With the User, Not the Technology
-
-The application requirements came from workflow discovery rather than beginning with a predetermined AI solution.
-
-The process was:
-
-**Understand the work → identify friction → determine where automation or AI helps → connect the necessary systems → preserve human control.**
-
-### Design for Failure
-
-External integrations are not always reliable.
-
-Tokens expire. Permissions change. APIs may not be enabled or available.
-
-The application therefore handles known failure states rather than assuming every external call will succeed.
-
-### Keep the System Interruptible
-
-The user can review, pause, skip, and correct activity.
-
-Automation supports the salesperson rather than removing her ability to intervene.
+- **Solve the Workflow, Not the Entire Category:** The goal was not to recreate Outreach, Salesloft, or another enterprise sales-engagement platform. The prototype focuses on the capabilities the user actually needed and intentionally leaves out functionality that was not necessary to validate the workflow.
+- **Start With the User, Not the Technology:** The application requirements came from workflow discovery rather than beginning with a predetermined AI solution. The process was: *Understand the work → identify friction → determine where automation or AI helps → connect the necessary systems → preserve human control.*
+- **Design for Failure:** External integrations are not always reliable. Tokens expire. Permissions change. APIs may not be enabled or available. The application therefore handles known failure states rather than assuming every external call will succeed.
+- **Keep the System Interruptible:** The user can review, pause, skip, and correct activity. Automation supports the salesperson rather than removing her ability to intervene.
 
 ---
 
 ## What I Learned
 
-### Workflow Understanding Comes Before AI Selection
-
-The useful question was not:
-
-> Where can I add AI?
-
-It was:
-
-> Where is this person losing time or capability, and what combination of software, automation, AI, and human judgment would improve that?
-
-### Integration Work Matters as Much as the Model
-
-The LLM is only one part of the system.
-
-Authentication, APIs, permissions, application state, error handling, and user experience determine whether an AI capability is actually usable.
-
-### Adoption Depends on Trust and Control
-
-For a workflow involving communication with real prospects, greater autonomy is not automatically better.
-
-Making AI output reviewable and automation interruptible gives the user visibility into what the system is doing.
-
-### Prototyping Exposes Production Requirements
-
-Building the workflow made it easier to identify what would be required to make the application reliable, governable, and scalable for broader organizational use.
+- **Workflow Understanding Comes Before AI Selection:** The useful question was not *"Where can I add AI?"* It was *"Where is this person losing time or capability, and what combination of software, automation, AI, and human judgment would improve that?"*
+- **Integration Work Matters as Much as the Model:** The LLM is only one part of the system. Authentication, APIs, permissions, application state, error handling, and user experience determine whether an AI capability is actually usable.
+- **Adoption Depends on Trust and Control:** For a workflow involving communication with real prospects, greater autonomy is not automatically better. Making AI output reviewable and automation interruptible gives the user visibility into what the system is doing.
+- **Prototyping Exposes Production Requirements:** Building the workflow made it easier to identify what would be required to make the application reliable, governable, and scalable for broader organizational use.
 
 ---
 
@@ -288,41 +228,11 @@ It does not currently include:
 
 ## What I Would Add for Production
 
-### Identity and Access
-
-- Role-based access
-- Organization-level tenant separation
-- More granular permissions
-
-### Reliability and Observability
-
-- Structured backend logging
-- Monitoring and alerting
-- Retry logic for external APIs
-- Rate limiting
-- Provider-level failure visibility
-
-### Governance
-
-- Formal data-retention and deletion policies
-- Audit logging
-- Automated unsubscribe handling
-- Sending-frequency safeguards
-- Documentation of what data is sent to external AI services
-
-### Testing
-
-- Enrollment logic tests
-- Sequence-advancement tests
-- API failure-state tests
-- Authorization and access-control tests
-
-### Integration
-
-- CRM synchronization
-- Contact import/export
-- Administrative reporting
-- Additional email-provider support
+- **Identity and Access:** Role-based access, organization-level tenant separation, and more granular permissions.
+- **Reliability and Observability:** Structured backend logging, monitoring and alerting, retry logic for external APIs, rate limiting, and provider-level failure visibility.
+- **Governance:** Formal data-retention and deletion policies, audit logging, automated unsubscribe handling, sending-frequency safeguards, and documentation of what data is sent to external AI services.
+- **Testing:** Enrollment logic tests, sequence-advancement tests, API failure-state tests, and authorization/access-control tests.
+- **Integration:** CRM synchronization, contact import/export, administrative reporting, and additional email-provider support.
 
 ---
 
@@ -347,6 +257,6 @@ Working prototype built around a real user workflow.
 
 The broader question behind the project was:
 
-**How can AI and automation be embedded into a business workflow in a way that reduces friction, connects the systems where work already happens, and keeps people responsible for decisions requiring judgment?**
+> **How can AI and automation be embedded into a business workflow in a way that reduces friction, connects the systems where work already happens, and keeps people responsible for decisions requiring judgment?**
 
-> Note: This repository is intended as a portfolio case study and code sample. Credentials and deployment configuration for the original application are not included.
+*Note: This repository is intended as a portfolio case study and code sample. Credentials and deployment configuration for the original application are not included.*
