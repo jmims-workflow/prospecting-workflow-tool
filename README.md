@@ -145,7 +145,7 @@ Firestore stores application records and supports real-time updates.
 Security rules are designed to:
 
 - Restrict users to their own records
-- Validate required fields and data types
+- Validate required fields, selected field types, and status values
 - Reject invalid writes
 - Default-deny access that has not been explicitly permitted
 
