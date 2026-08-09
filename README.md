@@ -72,6 +72,20 @@ The application allows a user to:
 - Pause or skip sequence activity
 - Keep user records isolated through Firestore access controls
 
+---## Screenshots
+
+![Dashboard overview](assets/screenshots/solo-outreach-dashboard.png)
+*Dashboard view showing prospect volume, active sequence count, and reply tracking at a glance — built to surface pipeline health without needing a separate reporting layer.*
+
+![AI-generated sequence builder](assets/screenshots/solo-outreach-sequence-card.png)
+*A live sequence generated from a niche/goal prompt, showing the AI-authored step count and targeting logic before any manual editing.*
+
+![Prospect enrollment flow](assets/screenshots/solo-outreach-enroll-in-sequence.png)
+*Enrolling an existing prospect into a sequence with a configurable start delay, so a sequence can be applied to a lead without rebuilding it per contact.*
+
+![A/B variant step editor](assets/screenshots/solo-outreach-add-step-ab-variant.png)
+*Step-level editor supporting subject line and email body A/B variants per touch, so testing isn't limited to the first email in a sequence.*
+
 ---
 
 ## Human-in-the-Loop Design
